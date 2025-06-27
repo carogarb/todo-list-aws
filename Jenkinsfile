@@ -72,13 +72,23 @@ pipeline {
 
         stage('Rest Tests') {
             steps {
-                catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
-                    echo 'Running rest tests'
-                    sh '''
-                        export PYTHONPATH=.
-                        pytest --junitxml=result-rest.xml test//integration//todoApiTest.py || exit
-                    '''
-                    junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
+                script {
+                    catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
+                        echo 'Export BASE_URL as a environment variable'
+                        def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                            returnStdout: true).trim()
+                        echo "$BASE_URL"
+                        
+                        echo 'Running rest tests'
+                        withEnv(["BASE_URL=${BASE_URL}"]) {
+                            sh '''
+                                export PYTHONPATH=.
+                                export BASE_URL=$BASE_URL
+                                pytest --junitxml=result-rest.xml test//integration//todoApiTest.py || exit
+                            '''
+                        }
+                        junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
+                    }
                 }
             }
         }
@@ -91,7 +101,11 @@ pipeline {
                 echo 'Promoting to PROD environment'
                 sh '''
                         git checkout master
-                        git merge develop
+                        git merge --no-commit develop
+                        git checkout --ours Jenkinsfile
+                        git add Jenkinsfile
+                        git add .
+                        git commit -m "Merged changes from develop branch, skipping Jenkinsfile"
                         git push https://${GITHUB_TOKEN}@github.com/carogarb/todo-list-aws.git master
                 '''    
             }
