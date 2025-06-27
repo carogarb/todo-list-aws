@@ -101,13 +101,9 @@ pipeline {
                 echo 'Promoting to PROD environment'
                 sh '''
                         git checkout master
-                        git merge --no-commit develop
-                        git checkout --ours Jenkinsfile
-                        git add Jenkinsfile
-                        git add .
-                        git commit -m "Merged changes from develop branch, skipping Jenkinsfile"
+                        git merge -Xours develop
                         git push https://${GITHUB_TOKEN}@github.com/carogarb/todo-list-aws.git master
-                '''    
+                '''  
             }
         }
 
