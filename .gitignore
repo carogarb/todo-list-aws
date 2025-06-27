@@ -5,3 +5,6 @@ tests
 pyenvunittests
 .coverage
 coverage.xml
+bandit.out
+flake8.out
+result-rest.xml
