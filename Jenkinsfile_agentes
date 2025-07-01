@@ -90,7 +90,7 @@ pipeline {
                         returnStdout: true).trim()
                     echo "$BASE_URL"
                     //writeFile(file: 'base_url.txt', text: data)
-                    sh 'echo $BASE_URL > base_url.txt'
+                    sh "echo $BASE_URL > base_url.txt"
                     echo 'Variable stored in file'
                     stash name: 'base-url', includes: 'base_url.txt' 
                 }
