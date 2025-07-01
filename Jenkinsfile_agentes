@@ -1,0 +1,108 @@
+pipeline {
+    agent any
+    
+    options {
+        timestamps()
+        skipDefaultCheckout()
+        timeout(time: 5, unit: 'MINUTES')
+    }
+
+    environment {
+        STAGE = "production"
+        AWS_REGION = "us-east-1"  
+        STACK_NAME = "todo-list-aws-${STAGE}"
+        S3_BUCKET = "unirbucket1-cgb"
+        GITHUB_TOKEN = credentials('github-token')
+    }
+
+    stages {
+        stage('Get code') {
+            agent {
+                label 'principal'
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    sh 'hostname -I'
+                    echo 'Getting the repo'
+                    git branch: 'master', url: 'https://${GITHUB_TOKEN}@github.com/carogarb/todo-list-aws.git'
+                    stash name: 'source', includes: '**'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            agent {
+                label 'principal'
+            }
+            steps {
+                script {
+                    sh 'hostname -I'
+                    unstash 'source'
+
+                    echo 'Running sam build'
+                    sh 'sam build'
+
+                    echo 'Running sam deploy'
+                    sh '''
+                        sam deploy \
+                        --stack-name ${STACK_NAME} \
+                        --s3-bucket ${S3_BUCKET} \
+                        --region ${AWS_REGION} \
+                        --capabilities CAPABILITY_IAM \
+                        --no-confirm-changeset \
+                        --no-fail-on-empty-changeset \
+                        --parameter-overrides Stage=${STAGE} \
+                        --on-failure DELETE
+                    '''
+
+                    echo 'Storing BASE_URL in a file to recover it later'
+                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                        returnStdout: true).trim()
+                    echo "$BASE_URL"
+                    //writeFile(file: 'base_url.txt', text: data)
+                    sh "echo $BASE_URL > base_url.txt"
+                    echo 'Variable stored in file'
+                    stash name: 'base-url', includes: 'base_url.txt'        
+                }         
+            }
+
+        }
+
+        stage('Rest Tests') {
+            agent {
+                label 'rest'
+            }            
+            steps {
+                script {
+                    sh 'hostname -I'
+                    unstash 'source'
+                    unstash 'base-url'
+
+                    catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
+                        echo 'Recovering BASE_URL from file'
+                        def BASE_URL = readFile(file: 'base_url.txt')
+                        echo "$BASE_URL"
+                        
+                        echo 'Running rest tests'
+                        withEnv(["BASE_URL=${BASE_URL}"]) {
+                            sh '''
+                                export PYTHONPATH=.
+                                export BASE_URL=$BASE_URL
+                                pytest -m api_read --junitxml=result-rest.xml test//integration//todoApiTest.py || exit
+                            '''
+                        }
+                        junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
+
+
