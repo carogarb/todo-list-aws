@@ -8,7 +8,7 @@ A continuación se describe la estructura del proyecto:
 - **pipelines** - pipelines de Jenkins que permiten construir el CI/CD.
 - **src** - en este directorio se almacena el código fuente de las funciones lambda con las que se va a trabajar.
 - **test** - Tests unitarios y de integración. 
-- **samconfig.toml** - Configuración de los stacks de Staging y Producción
+- **samconfig.toml** - Configuración de los stacks de Staging y Producción.
 - **template.yaml** - Template que define los recursos AWS de la aplicación.
 - **localEnvironment.json** - Permite el despliegue en local de la aplicación sobreescribiendo el endpoint de dynamodb para que apunte contra el docker de dynamo
 
