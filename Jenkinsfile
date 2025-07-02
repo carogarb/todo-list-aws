@@ -30,13 +30,9 @@ pipeline {
                 sh 'sam build'
 
                 echo 'Running sam deploy'
-<<<<<<< HEAD
                 sh '''
                     sam deploy --config-env production
                 '''
-=======
-                sh 'sam deploy --config-env staging'
->>>>>>> 0f6120632c221d129736a38c5d42369893088692
             }
 
         }
@@ -46,11 +42,7 @@ pipeline {
                 script {
                     catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
                         echo 'Export BASE_URL as a environment variable'
-<<<<<<< HEAD
                         def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-production --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
-=======
-                        def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
->>>>>>> 0f6120632c221d129736a38c5d42369893088692
                             returnStdout: true).trim()
                         echo "$BASE_URL"
                         
