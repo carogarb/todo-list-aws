@@ -16,9 +16,11 @@ pipeline {
             agent {
                 label 'principal'
             }
+            
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     sh 'hostname -I'
+                    
                     echo 'Getting the repo'
                     git branch: 'master', url: 'https://${GITHUB_TOKEN}@github.com/carogarb/todo-list-aws.git'
                     sh '''
@@ -33,14 +35,12 @@ pipeline {
             agent {
                 label 'principal'
             }
+            
             steps {
                 script {
-                    sh 'hostname -I'
-                    unstash 'source'
-
                     echo 'Running sam build'
                     sh 'sam build'
-
+    
                     echo 'Running sam deploy'
                     sh '''
                         sam deploy --config-env production
@@ -70,7 +70,7 @@ pipeline {
                     unstash 'base-url'
 
                     catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
-                        echo 'Recovering BASE_URL from file'
+                       echo 'Recovering BASE_URL from file'
                         def BASE_URL = readFile(file: 'base_url.txt')
                         echo "$BASE_URL"
 
@@ -79,24 +79,27 @@ pipeline {
                         
                         echo 'Running rest tests'
                         withEnv(["BASE_URL=${BASE_URL}"]) {
+                            echo 'Waiting until server is ready...'
+                            sleep(time:60, unit:"SECONDS")
+
                             sh '''
                                 export PYTHONPATH=.
                                 export BASE_URL=$BASE_URL
                                 pytest -m api_read --junitxml=result-rest.xml test//integration//todoApiTest.py || exit
                             '''
+                            junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
                         }
-                        junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
                     }
                 }
             }
         }
     }
-    
+
     post {
         always {
             cleanWs()
         }
     }
+    
+
 }
-
-

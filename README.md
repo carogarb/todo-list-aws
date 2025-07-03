@@ -10,7 +10,7 @@ A continuación se describe la estructura del proyecto:
 - **test** - Tests unitarios y de integración. 
 - **samconfig.toml** - Configuración de los stacks de Staging y Producción.
 - **template.yaml** - Template que define los recursos AWS de la aplicación.
-- **localEnvironment.json** - Permite el despliegue en local de la aplicación sobreescribiendo el endpoint de dynamodb para que apunte contra el docker de dynamo
+- **localEnvironment.json** - Permite el despliegue en local de la aplicación sobreescribiendo el endpoint de dynamodb para que apunte contra el docker de dynamo.
 
 ## Despliegue manual de la aplicación SAM en AWS
 
@@ -45,9 +45,9 @@ sam deploy --guided
 
 El despliegue de la aplicación empaqueta, publicará en un bucket s3 el artefacto y desplegará la aplicación en AWS. Solicitará la siguiente información
 
-* **Stack Name**: El nombre del stack que desplegará en CloudFormation. Debe ser único
+* **Stack Name**: El nombre del stack que desplegará en CloudFormation. Debe ser único.
 * **AWS Region**: La región en la que se desea publicar la Aplicación.
-* **Confirm changes before deploy**: Si se indica "yes" se solicitará confirmación antes del despliegue si se encuentran cambios 
+* **Confirm changes before deploy**: Si se indica "yes" se solicitará confirmación antes del despliegue si se encuentran cambios.
 * **Allow SAM CLI IAM role creation**: Permite la creación de roles IAM
 * **Save arguments to samconfig.toml**: Si se selecciona "yes" las respuestas se almacenarán en el fichero de configuración samconfig.toml, de esta forma el el futuro se podrá ejecutar con `sam deploy` y se leerá la configuración del fichero.
 
