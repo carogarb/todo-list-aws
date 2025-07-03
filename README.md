@@ -47,7 +47,7 @@ El despliegue de la aplicación empaqueta, publicará en un bucket s3 el artefac
 
 * **Stack Name**: El nombre del stack que desplegará en CloudFormation. Debe ser único.
 * **AWS Region**: La región en la que se desea publicar la Aplicación.
-* **Confirm changes before deploy**: Si se indica "yes" se solicitará confirmación antes del despliegue si se encuentran cambios 
+* **Confirm changes before deploy**: Si se indica "yes" se solicitará confirmación antes del despliegue si se encuentran cambios.
 * **Allow SAM CLI IAM role creation**: Permite la creación de roles IAM
 * **Save arguments to samconfig.toml**: Si se selecciona "yes" las respuestas se almacenarán en el fichero de configuración samconfig.toml, de esta forma el el futuro se podrá ejecutar con `sam deploy` y se leerá la configuración del fichero.
 
