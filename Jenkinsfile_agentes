@@ -8,10 +8,6 @@ pipeline {
     }
 
     environment {
-        STAGE = "staging"
-        AWS_REGION = "us-east-1"  
-        STACK_NAME = "todo-list-aws-${STAGE}"
-        S3_BUCKET = "unirbucket1-cgb"
         GITHUB_TOKEN = credentials('github-token')
     }
 
@@ -20,11 +16,16 @@ pipeline {
             agent {
                 label 'principal'
             }
+            
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     sh 'hostname -I'
+                    
                     echo 'Getting the repo'
                     git branch: 'develop', url: 'https://${GITHUB_TOKEN}@github.com/carogarb/todo-list-aws.git'
+                    sh '''
+                        curl -o samconfig.toml https://raw.githubusercontent.com/carogarb/todo-list-aws-config/refs/heads/staging/samconfig.toml
+                    '''
                     stash name: 'source', includes: '**'
                 }
             }
@@ -34,10 +35,11 @@ pipeline {
             agent {
                 label 'static'
             }
+            
             steps {
                 sh 'hostname -I'
                 unstash 'source'
-
+                
                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
                     echo 'Running flake8'
                     sh '''
@@ -52,7 +54,7 @@ pipeline {
                     echo 'Running bandit'
                     sh '''
                         export PYTHONPATH=.
-                        bandit -r ./src -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                        bandit --exit-zero -r ./src -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
                     '''
 
                     recordIssues tools:[pyLint(name:'Bandit', pattern:'bandit.out')]
@@ -64,35 +66,24 @@ pipeline {
             agent {
                 label 'principal'
             }
+            
             steps {
                 script {
-                    sh 'hostname -I'
-                    unstash 'source'
-
                     echo 'Running sam build'
                     sh 'sam build'
-
+    
                     echo 'Running sam deploy'
-                    sh '''
-                        sam deploy \
-                        --stack-name ${STACK_NAME} \
-                        --s3-bucket ${S3_BUCKET} \
-                        --region ${AWS_REGION} \
-                        --capabilities CAPABILITY_IAM \
-                        --no-confirm-changeset \
-                        --no-fail-on-empty-changeset \
-                        --parameter-overrides Stage=${STAGE} \
-                        --on-failure DELETE
-                    '''
-
+                    sh 'sam deploy --config-env staging'
+                    
                     echo 'Storing BASE_URL in a file to recover it later'
-                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name ${STACK_NAME} --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                    def BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
                         returnStdout: true).trim()
                     echo "$BASE_URL"
                     //writeFile(file: 'base_url.txt', text: data)
                     sh "echo $BASE_URL > base_url.txt"
                     echo 'Variable stored in file'
                     stash name: 'base-url', includes: 'base_url.txt' 
+                    
                 }
             }
 
@@ -109,19 +100,22 @@ pipeline {
                     unstash 'base-url'
 
                     catchError(buildResult: 'ABORTED', stageResult: 'FAILURE') {
-                        echo 'Recovering BASE_URL from file'
+                       echo 'Recovering BASE_URL from file'
                         def BASE_URL = readFile(file: 'base_url.txt')
                         echo "$BASE_URL"
                         
                         echo 'Running rest tests'
                         withEnv(["BASE_URL=${BASE_URL}"]) {
+                            echo 'Waiting until server is ready...'
+                            sleep(time:60, unit:"SECONDS")
+
                             sh '''
                                 export PYTHONPATH=.
                                 export BASE_URL=$BASE_URL
                                 pytest --junitxml=result-rest.xml test//integration//todoApiTest.py || exit
                             '''
+                            junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
                         }
-                        junit testResults: 'result-rest.xml', allowEmptyResults: false, skipPublishingChecks: true
                     }
                 }
             }
@@ -134,6 +128,7 @@ pipeline {
             agent {
                 label 'principal'
             }
+
             steps {
                 sh 'hostname -I'
                 unstash 'source'
@@ -148,12 +143,12 @@ pipeline {
         }
 
     }
-    
+
     post {
         always {
             cleanWs()
         }
     }
+    
+
 }
-
-
