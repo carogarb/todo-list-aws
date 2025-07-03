@@ -45,7 +45,7 @@ sam deploy --guided
 
 El despliegue de la aplicación empaqueta, publicará en un bucket s3 el artefacto y desplegará la aplicación en AWS. Solicitará la siguiente información
 
-* **Stack Name**: El nombre del stack que desplegará en CloudFormation. Debe ser único
+* **Stack Name**: El nombre del stack que desplegará en CloudFormation. Debe ser único.
 * **AWS Region**: La región en la que se desea publicar la Aplicación.
 * **Confirm changes before deploy**: Si se indica "yes" se solicitará confirmación antes del despliegue si se encuentran cambios 
 * **Allow SAM CLI IAM role creation**: Permite la creación de roles IAM
